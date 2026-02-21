@@ -7,10 +7,10 @@ import os from 'os'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 
-const CONFIG_DIR = path.join(os.homedir(), '.claude', 'backup-sync')
-const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json')
-const LOG_PATH = path.join(CONFIG_DIR, 'sync.log')
-const CLONE_DIR = path.join(CONFIG_DIR, 'repo')
+const CLAUDE_DIR = path.join(os.homedir(), '.claude')
+const CONFIG_PATH = path.join(CLAUDE_DIR, 'scripts', 'backup-config.json')
+const LOG_PATH = path.join(CLAUDE_DIR, 'logs', 'backup-sync.log')
+const CLONE_DIR = path.join(CLAUDE_DIR, 'backup-repo')
 
 const PLUGIN_ROOT = process.env.CLAUDE_PLUGIN_ROOT || path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const SCRIPT_PATH = path.join(PLUGIN_ROOT, 'scripts', 'backup-sync.sh')
@@ -33,7 +33,7 @@ function readLastLines(filePath, n) {
 }
 
 const server = new Server(
-  { name: 'backup-sync', version: '1.0.0' },
+  { name: 'backup-sync', version: '1.1.0' },
   { capabilities: { tools: {} } }
 )
 
@@ -41,21 +41,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: 'backup_configure',
-      description: 'Configure the backup-sync plugin with a GitHub repository',
+      description: 'Configure the backup-sync plugin with a git repository (GitHub, GitLab, or any git host)',
       inputSchema: {
         type: 'object',
         properties: {
           repo: {
             type: 'string',
-            description: 'GitHub repository in owner/repo format'
+            description: 'Repository in owner/repo format'
           },
           branch: {
             type: 'string',
             description: 'Branch to sync to (default: main)'
           },
-          gh_host: {
+          host: {
             type: 'string',
-            description: 'GitHub host (default: github.com)'
+            description: 'Git host (default: github.com). Supports github.com, gitlab.com, or any self-hosted git server'
           }
         },
         required: ['repo']
@@ -63,7 +63,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: 'backup_sync',
-      description: 'Run the backup-sync script to sync Claude config to GitHub',
+      description: 'Run the backup-sync script to sync Claude config to the git repository',
       inputSchema: {
         type: 'object',
         properties: {}
@@ -100,20 +100,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
       const repo = args.repo
       const branch = args.branch || 'main'
-      const gh_host = args.gh_host || 'github.com'
+      const host = args.host || 'github.com'
 
-      if (!fs.existsSync(CONFIG_DIR)) {
-        fs.mkdirSync(CONFIG_DIR, { recursive: true })
+      const scriptsDir = path.join(CLAUDE_DIR, 'scripts')
+      if (!fs.existsSync(scriptsDir)) {
+        fs.mkdirSync(scriptsDir, { recursive: true })
       }
 
-      const config = { repo, branch, gh_host }
-      fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8')
+      const config = { repo, branch, host }
+      fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n', 'utf8')
 
       return {
         content: [
           {
             type: 'text',
-            text: `Backup-sync configured successfully.\n\nRepo: ${repo}\nBranch: ${branch}\nHost: ${gh_host}\nConfig saved to: ${CONFIG_PATH}`
+            text: `Backup-sync configured successfully.\n\nRepo: ${repo}\nBranch: ${branch}\nHost: ${host}\nConfig saved to: ${CONFIG_PATH}`
           }
         ]
       }
@@ -217,7 +218,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const statusText = [
         `Repo:          ${config.repo}`,
         `Branch:        ${config.branch || 'main'}`,
-        `Host:          ${config.gh_host || 'github.com'}`,
+        `Host:          ${config.host || 'github.com'}`,
         `Last sync:     ${lastSync}`,
         `Pending changes:\n${pendingChanges}`
       ].join('\n')
