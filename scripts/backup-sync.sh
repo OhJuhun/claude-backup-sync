@@ -1,26 +1,20 @@
 #!/bin/bash
 # backup-sync.sh - Auto-sync Claude Code config to backup repository
-# Triggered by Stop hook or backup_sync MCP tool
+# Triggered by SessionEnd hook
 
 set -euo pipefail
 
-BACKUP_DIR="$HOME/.claude/backup-sync"
-CONFIG_FILE="$BACKUP_DIR/config.json"
-LOG_FILE="$BACKUP_DIR/sync.log"
-LOCK_FILE="$BACKUP_DIR/sync.lock"
+CONFIG_FILE="$HOME/.claude/scripts/backup-config.json"
+LOG_FILE="$HOME/.claude/logs/backup-sync.log"
+LOCK_FILE="$HOME/.claude/logs/backup-sync.lock"
 
 log() {
-  mkdir -p "$(dirname "$LOG_FILE")"
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
 
 # Prevent concurrent runs
 if [[ -f "$LOCK_FILE" ]]; then
-  if [[ "$(uname)" == "Darwin" ]]; then
-    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0) ))
-  else
-    LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0) ))
-  fi
+  LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0) ))
   if [[ $LOCK_AGE -lt 120 ]]; then
     exit 0
   fi
@@ -32,19 +26,18 @@ touch "$LOCK_FILE"
 # Check config exists
 if [[ ! -f "$CONFIG_FILE" ]]; then
   cat <<'MSG'
-[backup-sync] Backup repository not configured.
+[backup-sync] 백업 레포지토리가 설정되지 않았습니다.
 
-To configure, use the backup_configure MCP tool or run:
-  mkdir -p ~/.claude/backup-sync
-  cat > ~/.claude/backup-sync/config.json << 'EOF'
+설정하려면 다음을 실행하세요:
+  cat > ~/.claude/scripts/backup-config.json << 'EOF'
   {
-    "repo": "your-username/your-backup-repo",
+    "repo": "OhJuhun/backup-sh",
     "branch": "main",
     "gh_host": "github.com"
   }
   EOF
 
-Or in Claude Code: "/backup-setup"
+또는 Claude Code에서: "backup 설정해줘"
 MSG
   exit 0
 fi
@@ -59,14 +52,14 @@ if [[ -z "$REPO" ]]; then
   exit 1
 fi
 
-CLONE_DIR="$BACKUP_DIR/repo"
+CLONE_DIR="$HOME/.claude/backup-repo"
 
 # Clone if not exists
 if [[ ! -d "$CLONE_DIR/.git" ]]; then
-  log "Cloning $REPO..."
-  GH_HOST="$GH_HOST" gh repo clone "$REPO" "$CLONE_DIR" -- -b "$BRANCH" 2>> "$LOG_FILE"
+  log "Cloning $REPO from $GH_HOST..."
+  git clone "https://$GH_HOST/$REPO.git" "$CLONE_DIR" -b "$BRANCH" 2>> "$LOG_FILE"
   if [[ $? -ne 0 ]]; then
-    log "ERROR: Failed to clone $REPO"
+    log "ERROR: Failed to clone $REPO from $GH_HOST"
     exit 1
   fi
   log "Cloned successfully"
@@ -75,12 +68,9 @@ fi
 # Pull latest
 git -C "$CLONE_DIR" pull --rebase origin "$BRANCH" >> "$LOG_FILE" 2>&1 || true
 
-# --- Sync files ---
+# ─── Sync files ───
 
 CLAUDE_DIR="$HOME/.claude"
-
-# Ensure target directories exist
-mkdir -p "$CLONE_DIR/claude"
 
 # Claude Code config files
 cp "$CLAUDE_DIR/settings.json" "$CLONE_DIR/claude/settings.json" 2>/dev/null || true
@@ -128,11 +118,12 @@ if [[ -d "$CLAUDE_DIR/hud" ]]; then
   cp "$CLAUDE_DIR/hud/"* "$CLONE_DIR/claude/hud/" 2>/dev/null || true
 fi
 
-# Scripts (exclude backup-config.json which is now in backup-sync dir)
+# Scripts
 if [[ -d "$CLAUDE_DIR/scripts" ]]; then
   mkdir -p "$CLONE_DIR/claude/scripts"
   for f in "$CLAUDE_DIR/scripts/"*; do
     fname=$(basename "$f")
+    # Skip config file (contains no secrets but is local-only)
     [[ "$fname" == "backup-config.json" ]] && continue
     cp "$f" "$CLONE_DIR/claude/scripts/$fname" 2>/dev/null || true
   done
@@ -146,7 +137,7 @@ cp "$HOME/.ssh/config" "$CLONE_DIR/.ssh_config" 2>/dev/null || true
 # Brewfile
 brew bundle dump --file="$CLONE_DIR/Brewfile" --force 2>/dev/null || true
 
-# --- Check for changes ---
+# ─── Check for changes ───
 
 cd "$CLONE_DIR"
 
@@ -155,12 +146,12 @@ if git diff --quiet && git diff --cached --quiet && [[ -z "$(git ls-files --othe
   exit 0
 fi
 
-# --- Commit and push ---
+# ─── Commit and push ───
 
 CHANGED_FILES=$(git diff --name-only; git ls-files --others --exclude-standard)
 CHANGE_COUNT=$(echo "$CHANGED_FILES" | wc -l | tr -d ' ')
 
-log "Detected ${CHANGE_COUNT} changed file(s)"
+log "Detected $CHANGE_COUNT changed file(s)"
 
 git add -A
 git commit -m "$(cat <<EOF
@@ -172,12 +163,12 @@ $([ "$CHANGE_COUNT" -gt 10 ] && echo "... and $((CHANGE_COUNT - 10)) more")
 EOF
 )" >> "$LOG_FILE" 2>&1
 
-GH_HOST="$GH_HOST" git push origin "$BRANCH" >> "$LOG_FILE" 2>&1
+git push origin "$BRANCH" >> "$LOG_FILE" 2>&1
 
 if [[ $? -eq 0 ]]; then
-  log "Successfully pushed ${CHANGE_COUNT} file(s) to $REPO"
-  echo "[backup-sync] ${CHANGE_COUNT} file(s) synced to ${REPO}."
+  log "Successfully pushed $CHANGE_COUNT file(s) to $REPO"
+  echo "[backup-sync] ${CHANGE_COUNT}개 파일이 ${REPO}에 동기화되었습니다."
 else
   log "ERROR: Push failed"
-  echo "[backup-sync] Push failed. Check log: $LOG_FILE"
+  echo "[backup-sync] 푸시 실패. 로그 확인: $LOG_FILE"
 fi
