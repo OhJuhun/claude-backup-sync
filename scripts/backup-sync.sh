@@ -16,7 +16,11 @@ log() {
 
 # Prevent concurrent runs
 if [[ -f "$LOCK_FILE" ]]; then
-  LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0) ))
+  if [[ "$(uname)" == "Darwin" ]]; then
+    LOCK_AGE=$(( $(date +%s) - $(stat -f %m "$LOCK_FILE" 2>/dev/null || echo 0) ))
+  else
+    LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0) ))
+  fi
   if [[ $LOCK_AGE -lt 120 ]]; then
     exit 0
   fi
