@@ -8,7 +8,7 @@ User says: "backup setup", "setup backup", "configure backup", "/backup-setup"
 
 ## Steps
 
-### 1. Check GitHub CLI Authentication
+### 1. Check Git CLI Authentication
 
 ```bash
 gh auth status
@@ -19,37 +19,55 @@ If not authenticated, guide the user:
 gh auth login -h github.com --web
 ```
 
+For GitLab, guide the user to configure git credentials instead.
+
 ### 2. Ask for Backup Repository
 
-Ask the user for their backup repository name (e.g., `username/backup-repo`).
+Ask the user for:
+- **Repository** (e.g., `username/backup-repo`)
+- **Host** (default: `github.com`, or `gitlab.com`, etc.)
+- **Branch** (default: `main`)
 
-If the repository doesn't exist, offer to create it:
+If the repository doesn't exist and host is github.com, offer to create it:
 ```bash
-gh repo create <repo-name> --public --description "Claude Code config backup"
+gh repo create <repo-name> --private --description "Claude Code config backup"
 ```
 
-### 3. Configure the Plugin
+### 3. Create Config File
 
-Use the `backup_configure` MCP tool:
+Create the config file at `~/.claude/scripts/backup-config.json`:
 
-```
-backup_configure(repo: "<user's repo>", branch: "main", gh_host: "github.com")
+```bash
+mkdir -p ~/.claude/scripts
+cat > ~/.claude/scripts/backup-config.json << EOF
+{
+  "repo": "<user's repo>",
+  "branch": "main",
+  "host": "<user's host>"
+}
+EOF
 ```
 
 ### 4. Run First Sync
 
-Use the `backup_sync` MCP tool to test:
+Run the backup sync script to test:
 
+```bash
+bash ~/.claude/scripts/backup-sync.sh
 ```
-backup_sync()
+
+Or if running from the plugin:
+
+```bash
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/backup-sync.sh"
 ```
 
 ### 5. Verify
 
-Use the `backup_status` MCP tool to confirm everything is working:
+Check that the sync was successful by reading the log:
 
-```
-backup_status()
+```bash
+tail -5 ~/.claude/logs/backup-sync.log
 ```
 
 Show the user the result and confirm setup is complete.
@@ -59,7 +77,7 @@ Show the user the result and confirm setup is complete.
 - `~/.claude/settings.json` - Claude Code settings
 - `~/.claude/settings.local.json` - Local settings
 - `~/.claude/CLAUDE.md` - Global instructions
-- `~/.claude/.mcp.json` - MCP config (API keys replaced with env var references)
+- `~/.claude/.mcp.json` - MCP config (API keys replaced with `${ENV_VAR}` references)
 - `~/.claude/agents/` - Agent definitions
 - `~/.claude/rules/` - Rule files
 - `~/.claude/commands/` - Custom commands
@@ -71,9 +89,17 @@ Show the user the result and confirm setup is complete.
 - `~/.ssh/config` - SSH config (as `.ssh_config`)
 - `Brewfile` - Homebrew packages
 
+## Supported Hosts
+
+| Host | Example |
+|------|---------|
+| GitHub | `"host": "github.com"` |
+| GitLab | `"host": "gitlab.com"` |
+| Self-hosted | `"host": "git.mycompany.com"` |
+
 ## Notes
 
 - Sync runs automatically on every session end (Stop hook)
 - API keys in `.mcp.json` are automatically replaced with `${ENV_VAR}` references
-- Use `backup_sync` tool for manual sync anytime
-- Use `backup_log` tool to check sync history
+- Use `/backup-config` for manual sync anytime
+- Use `/restore-config` to restore from backup
