@@ -1,16 +1,17 @@
 # claude-backup-sync
 
-A Claude Code plugin that automatically syncs your Claude Code configuration to a GitHub repository on every session end.
+A Claude Code plugin that automatically syncs your Claude Code configuration to a GitHub/GitLab repository on every session end.
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
 | Auto Backup | Automatically backs up config on every session end (Stop hook) |
-| Manual Backup | `/backup-config` to manually push config to GitHub |
-| Restore | `/restore-config` to pull config from GitHub to local |
+| Manual Backup | `/backup-config` to manually push config |
+| Restore | `/restore-config` to pull config from backup to local |
 | API Key Security | API keys in `.mcp.json` are replaced with `${ENV_VAR}` references |
 | Change Detection | Only commits and pushes when changes are detected |
+| Multi-Host | Supports GitHub, GitLab, and any self-hosted git server |
 
 > **[한국어 문서](README.ko.md)**
 
@@ -50,17 +51,14 @@ Or add manually to `~/.claude/settings.json`:
 
 ## Setup
 
-### 1. Ensure GitHub CLI Authentication
+### 1. Ensure Git Authentication
 
+For GitHub:
 ```bash
 gh auth status
 ```
 
-If not authenticated:
-
-```bash
-gh auth login -h github.com --web
-```
+For GitLab or other hosts, ensure git credentials are configured.
 
 ### 2. Run Setup Command
 
@@ -68,15 +66,23 @@ gh auth login -h github.com --web
 /backup-setup
 ```
 
-Or configure manually:
+This will guide you through repository selection, config creation, and first sync test.
 
-```
-backup_configure(repo: "your-username/backup-repo", branch: "main", gh_host: "github.com")
+### 3. Manual Configuration (Alternative)
+
+Create `~/.claude/scripts/backup-config.json`:
+
+```json
+{
+  "repo": "your-username/backup-repo",
+  "branch": "main",
+  "host": "github.com"
+}
 ```
 
 ## Skills
 
-### `/backup-config` - Push config to GitHub
+### `/backup-config` - Push config to remote
 
 Manually trigger a backup of your current Claude Code config.
 
@@ -85,7 +91,7 @@ Manually trigger a backup of your current Claude Code config.
 /claude-backup-sync:backup-config
 ```
 
-### `/restore-config` - Pull config from GitHub
+### `/restore-config` - Pull config from remote
 
 Restore Claude Code config from the backup repository. Provides interactive category selection.
 
@@ -103,18 +109,21 @@ Restore Claude Code config from the backup repository. Provides interactive cate
 
 > **Note:** `.mcp.json` contains `${ENV_VAR}` placeholders. Set actual environment variables after restore.
 
-## MCP Tools
+### `/backup-setup` - Initial setup
 
-| Tool | Description |
-|------|-------------|
-| `backup_configure` | Configure backup repository, branch, and GitHub host |
-| `backup_sync` | Manually trigger a sync to GitHub |
-| `backup_status` | Check last sync time and pending changes |
-| `backup_log` | View recent sync history |
+Interactive setup wizard for first-time configuration.
+
+## Supported Hosts
+
+| Host | Config Example |
+|------|---------------|
+| GitHub | `"host": "github.com"` |
+| GitLab | `"host": "gitlab.com"` |
+| Self-hosted | `"host": "git.mycompany.com"` |
 
 ## How It Works
 
-1. **Auto Sync**: On session end (Stop hook), copies config to local clone and pushes to GitHub
+1. **Auto Sync**: On session end (Stop hook), copies config to local clone and pushes
 2. **API Key Security**: Replaces API keys with `${ENV_VAR}` references before pushing
 3. **Change Detection**: Skips commit/push if no changes detected
 4. **Concurrent Run Prevention**: Lock file prevents simultaneous syncs
@@ -127,7 +136,7 @@ Config: `~/.claude/scripts/backup-config.json`
 {
   "repo": "your-username/backup-repo",
   "branch": "main",
-  "gh_host": "github.com"
+  "host": "github.com"
 }
 ```
 
@@ -135,19 +144,18 @@ Logs: `~/.claude/logs/backup-sync.log`
 
 ## Requirements
 
-- **GitHub CLI** (`gh`): Installed and authenticated
 - **Git**: Standard git CLI
 - **Python 3**: For JSON processing
-- **GitHub Repository**: Public or private
+- **GitHub CLI** (`gh`): Only needed for GitHub setup (optional for GitLab)
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
 | "Not configured" | Run `/backup-setup` |
-| Auth failed | `gh auth login -h github.com --web` |
-| Permission error | Ensure `repo` or `public_repo` scope |
-| View logs | `backup_log(lines: 100)` |
+| Auth failed | Check git credentials for your host |
+| Permission error | Ensure token has repo access |
+| View logs | `cat ~/.claude/logs/backup-sync.log` |
 
 ## License
 
@@ -156,4 +164,3 @@ MIT License. See [LICENSE](LICENSE).
 ## Author
 
 Created by OhJuhun
-Cg==
