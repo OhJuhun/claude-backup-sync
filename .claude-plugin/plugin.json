@@ -1,0 +1,11 @@
+{
+  "name": "claude-backup-sync",
+  "version": "1.0.0",
+  "description": "Auto-sync Claude Code config to GitHub on session end",
+  "author": { "name": "OhJuhun" },
+  "repository": "https://github.com/OhJuhun/claude-backup-sync",
+  "license": "MIT",
+  "keywords": ["claude-code", "backup", "sync", "github", "config"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

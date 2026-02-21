@@ -1,0 +1,27 @@
+{
+  "name": "claude-backup-sync",
+  "version": "1.0.0",
+  "description": "Auto-sync Claude Code config to GitHub on session end",
+  "type": "module",
+  "main": "src/mcp-server.mjs",
+  "scripts": {
+    "start": "node src/mcp-server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "keywords": [
+    "claude-code",
+    "backup",
+    "sync",
+    "github",
+    "config",
+    "mcp"
+  ],
+  "author": "OhJuhun",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OhJuhun/claude-backup-sync.git"
+  }
+}

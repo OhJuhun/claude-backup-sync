@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-backup-sync",
+  "description": "Auto-sync Claude Code config to GitHub",
+  "owner": { "name": "OhJuhun" },
+  "plugins": [
+    {
+      "name": "claude-backup-sync",
+      "description": "Automatically backs up Claude Code config (settings, agents, rules, skills, MCP) to a GitHub repository on every session end.",
+      "version": "1.0.0",
+      "source": "./",
+      "category": "productivity",
+      "tags": ["backup", "sync", "github", "config"]
+    }
+  ],
+  "version": "1.0.0"
+}
