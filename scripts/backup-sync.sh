@@ -33,7 +33,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   {
     "repo": "OhJuhun/backup-sh",
     "branch": "main",
-    "gh_host": "github.com"
+    "host": "github.com"
   }
   EOF
 
@@ -45,7 +45,7 @@ fi
 # Read config
 REPO=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE'))['repo'])" 2>/dev/null)
 BRANCH=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('branch', 'main'))" 2>/dev/null)
-GH_HOST=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('gh_host', 'github.com'))" 2>/dev/null)
+HOST=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('host', 'github.com'))" 2>/dev/null)
 
 if [[ -z "$REPO" ]]; then
   log "ERROR: repo not set in config"
@@ -56,10 +56,10 @@ CLONE_DIR="$HOME/.claude/backup-repo"
 
 # Clone if not exists
 if [[ ! -d "$CLONE_DIR/.git" ]]; then
-  log "Cloning $REPO from $GH_HOST..."
-  git clone "https://$GH_HOST/$REPO.git" "$CLONE_DIR" -b "$BRANCH" 2>> "$LOG_FILE"
+  log "Cloning $REPO from $HOST..."
+  git clone "https://$HOST/$REPO.git" "$CLONE_DIR" -b "$BRANCH" 2>> "$LOG_FILE"
   if [[ $? -ne 0 ]]; then
-    log "ERROR: Failed to clone $REPO from $GH_HOST"
+    log "ERROR: Failed to clone $REPO from $HOST"
     exit 1
   fi
   log "Cloned successfully"
