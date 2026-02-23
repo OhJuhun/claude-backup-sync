@@ -1,17 +1,25 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-backup-sync",
-  "description": "Auto-sync Claude Code config to GitHub",
-  "owner": { "name": "OhJuhun" },
+  "owner": {
+    "name": "OhJuhun",
+    "email": "chmod777@kakao.com"
+  },
+  "metadata": {
+    "description": "Auto-sync Claude Code config to GitHub/GitLab on session end",
+    "version": "0.1.1"
+  },
   "plugins": [
     {
       "name": "claude-backup-sync",
-      "description": "Automatically backs up Claude Code config (settings, agents, rules, skills, MCP) to a GitHub repository on every session end.",
-      "version": "1.0.0",
+      "description": "Automatically backs up Claude Code config (settings, agents, rules, skills, MCP) to a GitHub/GitLab repository on every session end.",
+      "version": "0.1.1",
       "source": "./",
+      "author": { "name": "OhJuhun" },
+      "repository": "https://github.com/OhJuhun/claude-backup-sync",
+      "license": "MIT",
+      "keywords": ["claude-code", "backup", "sync", "github", "gitlab", "config"],
       "category": "productivity",
-      "tags": ["backup", "sync", "github", "config"]
+      "tags": ["backup", "sync", "github", "gitlab", "config", "claude-code"]
     }
-  ],
-  "version": "1.0.0"
+  ]
 }
